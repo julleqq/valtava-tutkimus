@@ -6,10 +6,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const data = await request.formData();
   const slug = data.get('slug')?.toString().trim();
 
-  if (!slug || slug === 'muut-aiheet') return redirect('/admin?error=missing', 302);
+  if (!slug || slug === 'muut-aiheet') return redirect('/admin/aiheet?error=missing', 302);
 
   const token = import.meta.env.GITHUB_TOKEN;
-  if (!token) return redirect('/admin?error=notoken', 302);
+  if (!token) return redirect('/admin/aiheet?error=notoken', 302);
 
   const apiUrl =
     'https://api.github.com/repos/julleqq/valtava-tutkimus/contents/src/data/topics.json';
@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   };
 
   const res = await fetch(apiUrl, { headers });
-  if (!res.ok) return redirect('/admin?error=github', 302);
+  if (!res.ok) return redirect('/admin/aiheet?error=github', 302);
   const file = await res.json() as { content: string; sha: string };
 
   const current = JSON.parse(
@@ -28,7 +28,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   ) as { slug: string; label: string; description: string }[];
 
   const updated = current.filter((t) => t.slug !== slug);
-  if (updated.length === current.length) return redirect('/admin?error=github', 302);
+  if (updated.length === current.length) return redirect('/admin/aiheet?error=github', 302);
 
   const writeRes = await fetch(apiUrl, {
     method: 'PUT',
@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     }),
   });
 
-  if (!writeRes.ok) return redirect('/admin?error=github', 302);
+  if (!writeRes.ok) return redirect('/admin/aiheet?error=github', 302);
 
-  return redirect('/admin?topic-deleted=1', 302);
+  return redirect('/admin/aiheet?topic-deleted=1', 302);
 };

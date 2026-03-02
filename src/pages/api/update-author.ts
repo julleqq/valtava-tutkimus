@@ -8,10 +8,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const name = data.get('name')?.toString().trim();
   const bio = data.get('bio')?.toString().trim() ?? '';
 
-  if (!slug || !name) return redirect('/admin?error=missing', 302);
+  if (!slug || !name) return redirect('/admin/kirjoittajat?error=missing', 302);
 
   const token = import.meta.env.GITHUB_TOKEN;
-  if (!token) return redirect('/admin?error=notoken', 302);
+  if (!token) return redirect('/admin/kirjoittajat?error=notoken', 302);
 
   const apiUrl =
     'https://api.github.com/repos/julleqq/valtava-tutkimus/contents/src/data/authors.json';
@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   };
 
   const res = await fetch(apiUrl, { headers });
-  if (!res.ok) return redirect('/admin?error=github', 302);
+  if (!res.ok) return redirect('/admin/kirjoittajat?error=github', 302);
   const file = await res.json() as { content: string; sha: string };
 
   const current = JSON.parse(
@@ -41,7 +41,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     }),
   });
 
-  if (!writeRes.ok) return redirect('/admin?error=github', 302);
+  if (!writeRes.ok) return redirect('/admin/kirjoittajat?error=github', 302);
 
-  return redirect('/admin?author-updated=1', 302);
+  return redirect('/admin/kirjoittajat?author-updated=1', 302);
 };

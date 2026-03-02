@@ -1,0 +1,114 @@
+---
+export const prerender = false;
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { getCollection } from 'astro:content';
+import { topics } from '../../data/topics';
+import { authors } from '../../data/authors';
+
+const url = new URL(Astro.request.url);
+const flash = url.searchParams.get('success') ? 'ok'
+  : url.searchParams.get('deleted') ? 'deleted'
+  : url.searchParams.get('error') ? 'err'
+  : null;
+const flashMsg = flash === 'ok' ? 'Postaus tallennettu.'
+  : flash === 'deleted' ? 'Postaus poistettu.'
+  : flash === 'err' ? 'Virhe — tarkista kentät ja yritä uudelleen.'
+  : null;
+
+const editSlug = url.searchParams.get('edit') ?? '';
+
+const allPosts = await getCollection('posts');
+const sorted = allPosts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+
+let editPost: typeof sorted[0] | undefined;
+if (editSlug) {
+  editPost = sorted.find((p) => p.slug === editSlug);
+}
+
+const today = new Date().toISOString().slice(0, 10);
+const editDate = editPost ? editPost.data.date.toISOString().slice(0, 10) : today;
+---
+
+<AdminLayout title="Postaukset" active="postaukset">
+  <p class="section-label"><a href="/admin">Hallinta</a> / Postauksia</p>
+
+  {flashMsg && (
+    <div class={`flash flash-${flash === 'ok' || flash === 'deleted' ? 'ok' : 'err'}`}>{flashMsg}</div>
+  )}
+
+  <!-- Form: new or edit -->
+  <form method="POST" action="/api/posts" class="form">
+    <input type="hidden" name="slug" value={editPost?.slug ?? ''} />
+
+    <div>
+      <label for="title">Otsikko</label>
+      <input id="title" name="title" type="text" required value={editPost?.data.title ?? ''} />
+    </div>
+
+    <div>
+      <label for="description">Kuvaus</label>
+      <input id="description" name="description" type="text" value={editPost?.data.description ?? ''} />
+    </div>
+
+    <div class="row">
+      <div>
+        <label for="author">Kirjoittaja</label>
+        <select id="author" name="author">
+          {authors.map((a) => (
+            <option value={a.slug} selected={editPost?.data.author === a.slug}>{a.name}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label for="date">Päivämäärä</label>
+        <input id="date" name="date" type="date" value={editDate} />
+      </div>
+    </div>
+
+    <div>
+      <label for="topic">Aihe</label>
+      <select id="topic" name="topic">
+        {topics.map((t) => (
+          <option value={t.slug} selected={editPost?.data.topic === t.slug}>{t.label}</option>
+        ))}
+      </select>
+    </div>
+
+    <div>
+      <label for="content">Teksti</label>
+      <textarea id="content" name="content" rows={18}>{editPost?.body ?? ''}</textarea>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:2rem;">
+      <button type="submit" class="btn">{editPost ? 'Tallenna muutokset' : 'Julkaise postaus'}</button>
+      {editPost && <a href="/admin/postaukset" class="btn" style="color:#6B6860;">Peruuta</a>}
+    </div>
+  </form>
+
+  {sorted.length > 0 && (
+    <>
+      <hr class="divider" />
+      <div class="item-list">
+        {sorted.map((post) => {
+          const formatted = new Intl.DateTimeFormat('fi-FI', {
+            day: 'numeric', month: 'long', year: 'numeric',
+          }).format(post.data.date);
+          return (
+            <div class="item-row">
+              <a href={`/kirjoitukset/${post.slug}`} class="item-title" target="_blank">{post.data.title}</a>
+              <div class="item-actions">
+                <span class="item-meta">{formatted}</span>
+                <a href={`/admin/postaukset?edit=${post.slug}`} class="item-link">Muokkaa</a>
+                <form method="POST" action="/api/delete-post" style="display:inline;">
+                  <input type="hidden" name="slug" value={post.slug} />
+                  <button type="submit" class="btn btn-danger item-link"
+                    onclick="return confirm('Poista postaus?')">Poista</button>
+                </form>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  )}
+</AdminLayout>

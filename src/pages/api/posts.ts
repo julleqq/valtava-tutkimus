@@ -23,19 +23,19 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const content = data.get('content')?.toString().trim() ?? '';
 
   if (!title || !content) {
-    return redirect('/admin?error=missing', 302);
+    return redirect('/admin/postaukset?error=missing', 302);
   }
 
   const token = import.meta.env.GITHUB_TOKEN;
   if (!token) {
-    return redirect('/admin?error=notoken', 302);
+    return redirect('/admin/postaukset?error=notoken', 302);
   }
 
   // If a new topic was typed inline, create it first
   let topic = data.get('topic')?.toString() ?? '';
   if (topic === '__new__') {
     const newTopicLabel = data.get('new-topic-label')?.toString().trim() ?? '';
-    if (!newTopicLabel) return redirect('/admin?error=missing-topic', 302);
+    if (!newTopicLabel) return redirect('/admin/postaukset?error=missing-topic', 302);
     topic = toSlug(newTopicLabel);
     const topicsUrl =
       'https://api.github.com/repos/julleqq/valtava-tutkimus/contents/src/data/topics.json';
@@ -96,8 +96,8 @@ ${content}
   });
 
   if (!res.ok) {
-    return redirect('/admin?error=github', 302);
+    return redirect('/admin/postaukset?error=github', 302);
   }
 
-  return redirect('/admin?success=1', 302);
+  return redirect('/admin/postaukset?success=1', 302);
 };

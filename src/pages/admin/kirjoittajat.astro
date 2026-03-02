@@ -1,0 +1,47 @@
+---
+export const prerender = false;
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { authors } from '../../data/authors';
+
+const url = new URL(Astro.request.url);
+const flash = url.searchParams.get('author-updated') ? 'ok'
+  : url.searchParams.get('error') ? 'err'
+  : null;
+const flashMsg = flash === 'ok' ? 'Kirjoittajan tiedot tallennettu.'
+  : flash === 'err' ? 'Virhe — tarkista kentät ja yritä uudelleen.'
+  : null;
+---
+
+<AdminLayout title="Kirjoittajat" active="kirjoittajat">
+  <p class="section-label"><a href="/admin">Hallinta</a> / Kirjoittajia</p>
+
+  {flashMsg && (
+    <div class={`flash flash-${flash === 'ok' ? 'ok' : 'err'}`}>{flashMsg}</div>
+  )}
+
+  {authors.map((author, i) => (
+    <>
+      {i > 0 && <hr class="divider" />}
+      <details class="collapsible">
+        <summary>
+          <span class="sum-label">{author.name}</span>
+          <span class="sum-arrow">›</span>
+        </summary>
+        <div class="inner">
+          <form method="POST" action="/api/update-author" class="form">
+            <input type="hidden" name="slug" value={author.slug} />
+            <div>
+              <label for={`name-${author.slug}`}>Nimi</label>
+              <input id={`name-${author.slug}`} name="name" type="text" required value={author.name} />
+            </div>
+            <div>
+              <label for={`bio-${author.slug}`}>Bio</label>
+              <textarea id={`bio-${author.slug}`} name="bio" rows={4}>{author.bio}</textarea>
+            </div>
+            <button type="submit" class="btn">Tallenna</button>
+          </form>
+        </div>
+      </details>
+    </>
+  ))}
+</AdminLayout>

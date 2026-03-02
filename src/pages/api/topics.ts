@@ -18,10 +18,10 @@ export const POST: APIRoute = async ({ request, redirect }) => {
   const label = data.get('label')?.toString().trim() ?? '';
   const description = data.get('description')?.toString().trim() ?? '';
 
-  if (!label) return redirect('/admin?error=missing-topic', 302);
+  if (!label) return redirect('/admin/aiheet?error=missing-topic', 302);
 
   const token = import.meta.env.GITHUB_TOKEN;
-  if (!token) return redirect('/admin?error=notoken', 302);
+  if (!token) return redirect('/admin/aiheet?error=notoken', 302);
 
   const slug = toSlug(label);
   const apiUrl =
@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   // Fetch current topics.json
   const res = await fetch(apiUrl, { headers });
-  if (!res.ok) return redirect('/admin?error=github', 302);
+  if (!res.ok) return redirect('/admin/aiheet?error=github', 302);
   const file = await res.json() as { content: string; sha: string };
 
   const current = JSON.parse(Buffer.from(file.content, 'base64').toString('utf-8')) as {
@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
 
   // Avoid duplicates
   if (current.some((t) => t.slug === slug)) {
-    return redirect('/admin?error=topic-exists', 302);
+    return redirect('/admin/aiheet?error=topic-exists', 302);
   }
 
   current.push({ slug, label, description });
@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     }),
   });
 
-  if (!writeRes.ok) return redirect('/admin?error=github', 302);
+  if (!writeRes.ok) return redirect('/admin/aiheet?error=github', 302);
 
-  return redirect('/admin?topic-success=1', 302);
+  return redirect('/admin/aiheet?topic-success=1', 302);
 };

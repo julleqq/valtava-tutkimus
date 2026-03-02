@@ -1,0 +1,65 @@
+---
+export const prerender = false;
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { topics } from '../../data/topics';
+
+const url = new URL(Astro.request.url);
+const flash = url.searchParams.get('topic-success') ? 'ok'
+  : url.searchParams.get('topic-deleted') ? 'deleted'
+  : url.searchParams.get('error') ? 'err'
+  : null;
+const flashMsg = flash === 'ok' ? 'Aihe lisätty.'
+  : flash === 'deleted' ? 'Aihe poistettu.'
+  : flash === 'err' ? 'Virhe — tarkista kentät ja yritä uudelleen.'
+  : null;
+---
+
+<AdminLayout title="Aiheet" active="aiheet">
+  <p class="section-label"><a href="/admin">Hallinta</a> / Aiheita</p>
+
+  {flashMsg && (
+    <div class={`flash flash-${flash === 'ok' || flash === 'deleted' ? 'ok' : 'err'}`}>{flashMsg}</div>
+  )}
+
+  <div class="item-list">
+    {topics.map((topic) => (
+      <div class="item-row">
+        <div>
+          <span class="item-title">{topic.label}</span>
+          {topic.description && (
+            <p class="item-meta" style="margin-top:0.25rem;">{topic.description}</p>
+          )}
+        </div>
+        <div class="item-actions">
+          <form method="POST" action="/api/delete-topic" style="display:inline;">
+            <input type="hidden" name="slug" value={topic.slug} />
+            <button type="submit" class="btn btn-danger item-link"
+              onclick="return confirm('Poista aihe? Postaukset siirtyvät Muut aiheet -kategoriaan.')">Poista</button>
+          </form>
+        </div>
+      </div>
+    ))}
+  </div>
+
+  <hr class="divider" />
+
+  <details class="collapsible">
+    <summary>
+      <span class="sum-label">Uusi aihe</span>
+      <span class="sum-arrow">›</span>
+    </summary>
+    <div class="inner">
+      <form method="POST" action="/api/topics" class="form">
+        <div>
+          <label for="label">Nimi</label>
+          <input id="label" name="label" type="text" required />
+        </div>
+        <div>
+          <label for="description">Kuvaus</label>
+          <input id="description" name="description" type="text" />
+        </div>
+        <button type="submit" class="btn">Lisää aihe</button>
+      </form>
+    </div>
+  </details>
+</AdminLayout>

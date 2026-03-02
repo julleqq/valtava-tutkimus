@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Hallinta">
+  <p class="section-label">Hallintapaneeli</p>
+
+  <nav style="display:flex;flex-direction:column;gap:0;">
+    <a href="/admin/postaukset" class="item-row" style="text-decoration:none;">
+      <span class="item-title">Postauksia</span>
+      <span class="item-meta" style="font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;">Hallitse →</span>
+    </a>
+    <a href="/admin/aiheet" class="item-row" style="text-decoration:none;">
+      <span class="item-title">Aiheita</span>
+      <span class="item-meta" style="font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;">Hallitse →</span>
+    </a>
+    <a href="/admin/kirjoittajat" class="item-row" style="text-decoration:none;">
+      <span class="item-title">Kirjoittajia</span>
+      <span class="item-meta" style="font-size:0.65rem;letter-spacing:0.1em;text-transform:uppercase;">Hallitse →</span>
+    </a>
+  </nav>
+</AdminLayout>
