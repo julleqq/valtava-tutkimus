@@ -1,19 +1,18 @@
 ---
+export const prerender = true;
+
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { topics } from '../../data/topics';
 
-const base = import.meta.env.BASE_URL;
-
 const allPosts = await getCollection('posts', ({ data }) => !data.draft);
-
 const topicsWithCount = topics.map((topic) => ({
   ...topic,
   count: allPosts.filter((p) => p.data.topic === topic.slug).length,
 }));
 ---
 
-<BaseLayout title="Aiheet" description="Kaikki Valtavan Tutkimuksen aiheet.">
+<BaseLayout title="Aiheet">
   <section class="pt-40 pb-32 px-8">
     <div class="max-w-2xl mx-auto">
       <p class="text-xs tracking-widest uppercase text-muted mb-16">Aiheet</p>
@@ -22,10 +21,7 @@ const topicsWithCount = topics.map((topic) => ({
         {topicsWithCount.map((topic, i) => (
           <div>
             {i > 0 && <div class="border-t border-border"></div>}
-            <a
-              href={`${base}/aiheet/${topic.slug}`}
-              class="group flex items-start justify-between py-8 gap-8"
-            >
+            <a href={`/aiheet/${topic.slug}`} class="group flex items-start justify-between py-8 gap-8">
               <div class="flex items-start gap-6">
                 <span class="text-xs text-muted/40 font-light tabular-nums pt-1 w-6 flex-shrink-0">
                   {String(i + 1).padStart(2, '0')}
@@ -39,9 +35,7 @@ const topicsWithCount = topics.map((topic) => ({
                   </p>
                 </div>
               </div>
-              <div class="flex-shrink-0 text-xs text-muted/40 tabular-nums pt-1">
-                {topic.count}
-              </div>
+              <div class="flex-shrink-0 text-xs text-muted/40 tabular-nums pt-1">{topic.count}</div>
             </a>
           </div>
         ))}

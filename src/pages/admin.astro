@@ -1,256 +1,200 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
-import { topics } from '../data/topics';
+export const prerender = false;
 
-const topicList = topics;
+import { getCollection } from 'astro:content';
+import { topics } from '../data/topics';
+import { getAuthor } from '../data/authors';
+
+const success = Astro.url.searchParams.get('success');
+const error = Astro.url.searchParams.get('error');
+
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+const recentPosts = allPosts
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 10);
+
+const today = new Date().toISOString().split('T')[0];
 ---
 
-<BaseLayout title="Kirjoittajat">
-  <section class="pt-32 pb-32 px-8 min-h-screen">
-    <div class="max-w-xl mx-auto">
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hallinta — Valtava Tutkimus</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&family=Inter:wght@300;400&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html { background: #0C0C0B; color: #E8E5DE; font-family: 'Inter', system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+      body { min-height: 100vh; }
 
-      <!-- Login -->
-      <div id="login-section">
-        <p class="text-xs tracking-widest uppercase text-muted mb-12">Kirjoittajan sisäänkirjautuminen</p>
-        <form id="login-form" class="space-y-4">
-          <div>
-            <label class="text-xs tracking-widest uppercase text-muted block mb-2">Käyttäjätunnus</label>
-            <input
-              id="username"
-              type="text"
-              autocomplete="username"
-              class="w-full bg-surface border border-border text-parchment text-sm font-light px-4 py-3 outline-none focus:border-muted transition-colors"
-            />
-          </div>
-          <div>
-            <label class="text-xs tracking-widest uppercase text-muted block mb-2">Salasana</label>
-            <input
-              id="password"
-              type="password"
-              autocomplete="current-password"
-              class="w-full bg-surface border border-border text-parchment text-sm font-light px-4 py-3 outline-none focus:border-muted transition-colors"
-            />
-          </div>
-          <p id="login-error" class="text-xs text-muted/60 hidden">Väärät tunnukset.</p>
-          <button
-            type="submit"
-            class="text-xs tracking-widest uppercase text-muted hover:text-parchment transition-colors mt-4"
-          >
-            Kirjaudu →
-          </button>
+      /* Layout */
+      .topbar { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem; border-bottom: 1px solid #252420; }
+      .topbar-title { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1.125rem; color: #E8E5DE; text-decoration: none; }
+      .topbar-right { display: flex; align-items: center; gap: 2rem; }
+      .topbar-link { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; text-decoration: none; }
+      .topbar-link:hover { color: #E8E5DE; }
+
+      .main { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+
+      /* Flash messages */
+      .flash { font-size: 0.75rem; letter-spacing: 0.05em; padding: 0.75rem 1rem; margin-bottom: 2rem; border: 1px solid; }
+      .flash-success { border-color: #252420; color: #6B6860; }
+      .flash-error { border-color: #3a2020; color: #8a6060; }
+
+      /* Section header */
+      .section-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; margin-bottom: 2rem; }
+
+      /* Form */
+      .form { display: flex; flex-direction: column; gap: 1.25rem; }
+      label { display: block; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; margin-bottom: 0.4rem; }
+      input, select, textarea {
+        display: block; width: 100%;
+        background: #141413; border: 1px solid #252420;
+        color: #E8E5DE; font-family: 'Inter', system-ui, sans-serif;
+        font-size: 0.875rem; font-weight: 300;
+        padding: 0.75rem 1rem; outline: none;
+        appearance: none; -webkit-appearance: none;
+      }
+      input:focus, select:focus, textarea:focus { border-color: #6B6860; }
+      textarea { resize: vertical; line-height: 1.7; min-height: 320px; }
+      .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+      .submit-row { display: flex; align-items: center; gap: 2rem; padding-top: 0.5rem; }
+      button[type="submit"] {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase;
+        color: #6B6860; background: none; border: none; cursor: pointer; padding: 0;
+      }
+      button[type="submit"]:hover { color: #E8E5DE; }
+
+      /* Divider */
+      .divider { border: none; border-top: 1px solid #252420; margin: 3rem 0; }
+
+      /* Posts list */
+      .post-list { display: flex; flex-direction: column; }
+      .post-item { display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; padding: 1rem 0; border-bottom: 1px solid #252420; }
+      .post-item:first-child { border-top: 1px solid #252420; }
+      .post-title { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1.125rem; color: #E8E5DE; text-decoration: none; }
+      .post-title:hover { opacity: 0.6; }
+      .post-meta { font-size: 0.7rem; color: #6B6860; white-space: nowrap; }
+
+      /* Logout form */
+      .logout-btn { font-family: 'Inter', system-ui, sans-serif; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; background: none; border: none; cursor: pointer; }
+      .logout-btn:hover { color: #E8E5DE; }
+    </style>
+  </head>
+  <body>
+
+    <header class="topbar">
+      <a href="/" class="topbar-title">Valtava Tutkimus</a>
+      <div class="topbar-right">
+        <a href="/aiheet" class="topbar-link">Aiheet</a>
+        <form method="POST" action="/api/logout" style="display:inline">
+          <button type="submit" class="logout-btn">Kirjaudu ulos</button>
         </form>
       </div>
+    </header>
 
-      <!-- Editor (hidden until login) -->
-      <div id="editor-section" class="hidden space-y-8">
-        <div class="flex items-center justify-between">
-          <p class="text-xs tracking-widest uppercase text-muted">Uusi kirjoitus</p>
-          <button id="logout-btn" class="text-xs tracking-widest uppercase text-muted/40 hover:text-muted transition-colors">
-            Kirjaudu ulos
-          </button>
+    <main class="main">
+
+      {success && (
+        <div class="flash flash-success">
+          Kirjoitus julkaistu. Sivu päivittyy noin 2 minuutissa.
+        </div>
+      )}
+      {error === 'missing' && (
+        <div class="flash flash-error">Täytä otsikko ja sisältö.</div>
+      )}
+      {error === 'github' && (
+        <div class="flash flash-error">GitHub-virhe. Tarkista GITHUB_TOKEN.</div>
+      )}
+      {error === 'notoken' && (
+        <div class="flash flash-error">GITHUB_TOKEN puuttuu ympäristömuuttujista.</div>
+      )}
+
+      <!-- New post form -->
+      <p class="section-label">Uusi kirjoitus</p>
+
+      <form method="POST" action="/api/posts" class="form">
+        <div>
+          <label for="title">Otsikko</label>
+          <input id="title" name="title" type="text" required />
         </div>
 
-        <div class="space-y-5">
-          <div>
-            <label class="text-xs tracking-widest uppercase text-muted block mb-2">Otsikko</label>
-            <input
-              id="f-title"
-              type="text"
-              class="w-full bg-surface border border-border text-parchment text-sm font-light px-4 py-3 outline-none focus:border-muted transition-colors"
-            />
-          </div>
+        <div>
+          <label for="description">Kuvaus</label>
+          <input id="description" name="description" type="text" />
+        </div>
 
+        <div class="row">
           <div>
-            <label class="text-xs tracking-widest uppercase text-muted block mb-2">Kuvaus</label>
-            <input
-              id="f-description"
-              type="text"
-              class="w-full bg-surface border border-border text-parchment text-sm font-light px-4 py-3 outline-none focus:border-muted transition-colors"
-            />
+            <label for="author">Kirjoittaja</label>
+            <select id="author" name="author">
+              <option value="julle">Julle</option>
+              <option value="tatu">Tatu</option>
+            </select>
           </div>
-
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="text-xs tracking-widest uppercase text-muted block mb-2">Kirjoittaja</label>
-              <select
-                id="f-author"
-                class="w-full bg-surface border border-border text-parchment text-sm font-light px-4 py-3 outline-none focus:border-muted transition-colors appearance-none"
-              >
-                <option value="julle">Julle</option>
-                <option value="tatu">Tatu</option>
-              </select>
-            </div>
-            <div>
-              <label class="text-xs tracking-widest uppercase text-muted block mb-2">Aihe</label>
-              <select
-                id="f-topic"
-                class="w-full bg-surface border border-border text-parchment text-sm font-light px-4 py-3 outline-none focus:border-muted transition-colors appearance-none"
-              >
-                {topicList.map((t) => (
-                  <option value={t.slug}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
           <div>
-            <label class="text-xs tracking-widest uppercase text-muted block mb-2">Päivämäärä</label>
-            <input
-              id="f-date"
-              type="date"
-              class="w-full bg-surface border border-border text-parchment text-sm font-light px-4 py-3 outline-none focus:border-muted transition-colors"
-            />
-          </div>
-
-          <div>
-            <label class="text-xs tracking-widest uppercase text-muted block mb-2">Sisältö</label>
-            <textarea
-              id="f-content"
-              rows="16"
-              placeholder="Kirjoita tähän. Voit käyttää Markdownia: **lihavointi**, *kursiivi*, ## Väliotsikko"
-              class="w-full bg-surface border border-border text-parchment text-sm font-light px-4 py-3 outline-none focus:border-muted transition-colors resize-y font-sans leading-relaxed placeholder:text-muted/30"
-            ></textarea>
+            <label for="topic">Aihe</label>
+            <select id="topic" name="topic">
+              {topics.map((t) => (
+                <option value={t.slug}>{t.label}</option>
+              ))}
+            </select>
           </div>
         </div>
 
-        <div class="flex gap-6 items-center pt-2">
-          <button
-            id="generate-btn"
-            class="text-xs tracking-widest uppercase text-muted hover:text-parchment transition-colors"
-          >
-            Luo kirjoitus →
-          </button>
+        <div>
+          <label for="date">Päivämäärä</label>
+          <input id="date" name="date" type="date" value={today} required />
         </div>
 
-        <!-- Output -->
-        <div id="output-section" class="hidden space-y-4 pt-4 border-t border-border">
-          <p class="text-xs tracking-widest uppercase text-muted">Valmis tiedosto</p>
-          <p class="text-xs text-muted/60 font-light leading-relaxed">
-            Kopioi teksti alla, avaa GitHub-linkki, liitä ja tallenna.
-          </p>
-          <pre
-            id="markdown-output"
-            class="bg-surface border border-border text-parchment/80 text-xs font-mono p-4 overflow-auto whitespace-pre-wrap leading-relaxed"
-          ></pre>
-          <div class="flex flex-wrap gap-6 items-center">
-            <button
-              id="copy-btn"
-              class="text-xs tracking-widest uppercase text-muted hover:text-parchment transition-colors"
-            >
-              Kopioi leikepöydälle
-            </button>
-            <a
-              id="github-link"
-              href="https://github.com/julleqq/valtava-tutkimus/new/main/src/content/posts"
-              target="_blank"
-              rel="noopener"
-              class="text-xs tracking-widest uppercase text-muted/50 hover:text-muted transition-colors"
-            >
-              Avaa GitHub →
-            </a>
-            <span id="copy-confirm" class="text-xs text-muted/40 hidden">Kopioitu.</span>
-          </div>
+        <div>
+          <label for="content">Sisältö</label>
+          <textarea
+            id="content"
+            name="content"
+            required
+            placeholder="Kirjoita tähän. Markdown toimii: **lihavointi**, *kursiivi*, ## Väliotsikko"
+          ></textarea>
         </div>
-      </div>
 
-    </div>
-  </section>
-</BaseLayout>
+        <div class="submit-row">
+          <button type="submit">Julkaise →</button>
+        </div>
+      </form>
 
-<script>
-  const U = 'valtavatutkimus';
-  const P = 'JulleTATU69';
+      <hr class="divider" />
 
-  const loginSection = document.getElementById('login-section')!;
-  const editorSection = document.getElementById('editor-section')!;
-  const loginForm = document.getElementById('login-form') as HTMLFormElement;
-  const loginError = document.getElementById('login-error')!;
-  const logoutBtn = document.getElementById('logout-btn')!;
-  const generateBtn = document.getElementById('generate-btn')!;
-  const copyBtn = document.getElementById('copy-btn')!;
-  const outputSection = document.getElementById('output-section')!;
-  const markdownOutput = document.getElementById('markdown-output')!;
-  const copyConfirm = document.getElementById('copy-confirm')!;
-  const dateInput = document.getElementById('f-date') as HTMLInputElement;
+      <!-- Recent posts -->
+      <p class="section-label">Julkaistut kirjoitukset</p>
 
-  // Set today's date
-  dateInput.value = new Date().toISOString().split('T')[0];
+      {recentPosts.length === 0 ? (
+        <p style="color:#6B6860; font-size:0.875rem; font-weight:300">Ei vielä kirjoituksia.</p>
+      ) : (
+        <div class="post-list">
+          {recentPosts.map((post) => {
+            const author = getAuthor(post.data.author);
+            const formatted = new Intl.DateTimeFormat('fi-FI', {
+              day: 'numeric', month: 'numeric', year: 'numeric',
+            }).format(post.data.date);
+            return (
+              <div class="post-item">
+                <a href={`/kirjoitukset/${post.slug}`} class="post-title" target="_blank">
+                  {post.data.title}
+                </a>
+                <span class="post-meta">{author.name} · {formatted}</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-  function toSlug(title: string): string {
-    return title
-      .toLowerCase()
-      .replace(/ä/g, 'a').replace(/ö/g, 'o').replace(/å/g, 'a')
-      .replace(/[^a-z0-9\s-]/g, '')
-      .trim()
-      .replace(/\s+/g, '-');
-  }
-
-  function showEditor() {
-    loginSection.classList.add('hidden');
-    editorSection.classList.remove('hidden');
-    sessionStorage.setItem('vt-auth', '1');
-  }
-
-  function showLogin() {
-    editorSection.classList.add('hidden');
-    loginSection.classList.remove('hidden');
-    sessionStorage.removeItem('vt-auth');
-  }
-
-  // Persist session
-  if (sessionStorage.getItem('vt-auth') === '1') showEditor();
-
-  loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const u = (document.getElementById('username') as HTMLInputElement).value;
-    const p = (document.getElementById('password') as HTMLInputElement).value;
-    if (u === U && p === P) {
-      loginError.classList.add('hidden');
-      showEditor();
-    } else {
-      loginError.classList.remove('hidden');
-    }
-  });
-
-  logoutBtn.addEventListener('click', showLogin);
-
-  generateBtn.addEventListener('click', () => {
-    const title = (document.getElementById('f-title') as HTMLInputElement).value.trim();
-    const description = (document.getElementById('f-description') as HTMLInputElement).value.trim();
-    const author = (document.getElementById('f-author') as HTMLSelectElement).value;
-    const topic = (document.getElementById('f-topic') as HTMLSelectElement).value;
-    const date = (document.getElementById('f-date') as HTMLInputElement).value;
-    const content = (document.getElementById('f-content') as HTMLTextAreaElement).value.trim();
-
-    if (!title || !content) {
-      alert('Täytä vähintään otsikko ja sisältö.');
-      return;
-    }
-
-    const slug = toSlug(title);
-    const md = `---
-title: "${title}"
-description: "${description}"
-author: ${author}
-topic: ${topic}
-date: ${date}
-draft: false
----
-
-${content}`;
-
-    markdownOutput.textContent = md;
-    outputSection.classList.remove('hidden');
-
-    // Update GitHub link with suggested filename
-    const githubLink = document.getElementById('github-link') as HTMLAnchorElement;
-    githubLink.href = `https://github.com/julleqq/valtava-tutkimus/new/main/src/content/posts?filename=${slug}.md`;
-  });
-
-  copyBtn.addEventListener('click', async () => {
-    const text = markdownOutput.textContent ?? '';
-    await navigator.clipboard.writeText(text);
-    copyConfirm.classList.remove('hidden');
-    setTimeout(() => copyConfirm.classList.add('hidden'), 2000);
-  });
-</script>
+    </main>
+  </body>
+</html>

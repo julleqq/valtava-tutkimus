@@ -1,15 +1,15 @@
 ---
+export const prerender = true;
+
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import { authors } from '../data/authors';
 import { getTopic } from '../data/topics';
 
-const base = import.meta.env.BASE_URL;
-
 const allPosts = await getCollection('posts', ({ data }) => !data.draft);
 ---
 
-<BaseLayout title="Kirjoittajat" description="Julle ja Tatu — Valtavan Tutkimuksen kirjoittajat.">
+<BaseLayout title="Kirjoittajat">
   <section class="pt-40 pb-32 px-8">
     <div class="max-w-2xl mx-auto">
       <p class="text-xs tracking-widest uppercase text-muted mb-16">Kirjoittajat</p>
@@ -19,16 +19,10 @@ const allPosts = await getCollection('posts', ({ data }) => !data.draft);
           const authorPosts = allPosts
             .filter((p) => p.data.author === author.slug)
             .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
-
           return (
             <div>
-              <h2 class="font-serif italic font-light text-4xl text-parchment mb-3">
-                {author.name}
-              </h2>
-              <p class="text-muted text-sm font-light leading-relaxed max-w-sm mb-12">
-                {author.bio}
-              </p>
-
+              <h2 class="font-serif italic font-light text-4xl text-parchment mb-3">{author.name}</h2>
+              <p class="text-muted text-sm font-light leading-relaxed max-w-sm mb-12">{author.bio}</p>
               {authorPosts.length > 0 && (
                 <div>
                   <p class="text-xs tracking-widest uppercase text-muted/50 mb-6">Kirjoitukset</p>
@@ -36,27 +30,17 @@ const allPosts = await getCollection('posts', ({ data }) => !data.draft);
                     {authorPosts.map((post, i) => {
                       const topic = getTopic(post.data.topic);
                       const formatted = new Intl.DateTimeFormat('fi-FI', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
+                        day: 'numeric', month: 'long', year: 'numeric',
                       }).format(post.data.date);
-
                       return (
                         <div>
                           {i > 0 && <div class="border-t border-border"></div>}
-                          <a
-                            href={`${base}/kirjoitukset/${post.slug}`}
-                            class="group flex items-center justify-between py-4 gap-8"
-                          >
+                          <a href={`/kirjoitukset/${post.slug}`} class="group flex items-center justify-between py-4 gap-8">
                             <span class="font-serif italic font-light text-base text-parchment group-hover:opacity-70 transition-opacity">
                               {post.data.title}
                             </span>
                             <div class="flex-shrink-0 flex items-center gap-4">
-                              {topic && (
-                                <span class="text-xs text-muted/40 tracking-widest uppercase hidden sm:block">
-                                  {topic.label}
-                                </span>
-                              )}
+                              {topic && <span class="text-xs text-muted/40 tracking-widest uppercase hidden sm:block">{topic.label}</span>}
                               <span class="text-xs text-muted/50">{formatted}</span>
                             </div>
                           </a>
