@@ -2,7 +2,7 @@
 title: "Empiirikko kohtaa psykedeelisen kalan"
 description: "Ayer kääntyy"
 author: tatu
-topic: psykedeelit
+topic: tutkiessa-tormattya
 date: 2026-03-02
 draft: false
 ---
