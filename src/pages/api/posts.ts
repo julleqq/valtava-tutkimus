@@ -32,7 +32,9 @@ export const POST: APIRoute = async ({ request, redirect }) => {
     return redirect('/admin?error=notoken', 302);
   }
 
-  const slug = toSlug(title);
+  // Use existing slug when editing, generate from title when creating
+  const providedSlug = data.get('slug')?.toString().trim();
+  const slug = providedSlug || toSlug(title);
   const fileContent = `---
 title: "${title.replace(/"/g, '\\"')}"
 description: "${description.replace(/"/g, '\\"')}"

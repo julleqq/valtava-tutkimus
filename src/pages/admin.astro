@@ -6,14 +6,48 @@ import { topics } from '../data/topics';
 import { getAuthor } from '../data/authors';
 
 const success = Astro.url.searchParams.get('success');
+const topicSuccess = Astro.url.searchParams.get('topic-success');
 const error = Astro.url.searchParams.get('error');
+const editSlug = Astro.url.searchParams.get('edit');
+
+// When editing, fetch the post from GitHub
+interface EditData {
+  title: string; description: string; author: string;
+  topic: string; date: string; body: string;
+}
+let editData: EditData | null = null;
+
+if (editSlug && import.meta.env.GITHUB_TOKEN) {
+  const res = await fetch(
+    `https://api.github.com/repos/julleqq/valtava-tutkimus/contents/src/content/posts/${editSlug}.md`,
+    { headers: { Authorization: `Bearer ${import.meta.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github+json' } }
+  );
+  if (res.ok) {
+    const file = await res.json() as { content: string };
+    const raw = Buffer.from(file.content, 'base64').toString('utf-8');
+    const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+    if (match) {
+      const fm = match[1];
+      const get = (key: string) =>
+        fm.match(new RegExp(`^${key}:\\s*"?(.*?)"?\\s*$`, 'm'))?.[1]?.replace(/\\"/g, '"') ?? '';
+      editData = {
+        title: get('title'),
+        description: get('description'),
+        author: get('author'),
+        topic: get('topic'),
+        date: get('date'),
+        body: match[2].trim(),
+      };
+    }
+  }
+}
 
 const allPosts = await getCollection('posts', ({ data }) => !data.draft);
 const recentPosts = allPosts
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
-  .slice(0, 10);
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
 const today = new Date().toISOString().split('T')[0];
+const isEditing = editSlug && editData;
 ---
 
 <!doctype html>
@@ -24,16 +58,12 @@ const today = new Date().toISOString().split('T')[0];
     <title>Hallinta — Valtava Tutkimus</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&family=Inter:wght@300;400&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&family=Inter:wght@300;400&display=swap" rel="stylesheet" />
     <style>
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
       html { background: #0C0C0B; color: #E8E5DE; font-family: 'Inter', system-ui, sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
       body { min-height: 100vh; }
 
-      /* Layout */
       .topbar { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem; border-bottom: 1px solid #252420; }
       .topbar-title { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1.125rem; color: #E8E5DE; text-decoration: none; }
       .topbar-right { display: flex; align-items: center; gap: 2rem; }
@@ -42,15 +72,14 @@ const today = new Date().toISOString().split('T')[0];
 
       .main { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
 
-      /* Flash messages */
-      .flash { font-size: 0.75rem; letter-spacing: 0.05em; padding: 0.75rem 1rem; margin-bottom: 2rem; border: 1px solid; }
+      .flash { font-size: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 2rem; border: 1px solid; }
       .flash-success { border-color: #252420; color: #6B6860; }
       .flash-error { border-color: #3a2020; color: #8a6060; }
 
-      /* Section header */
       .section-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; margin-bottom: 2rem; }
+      .section-label a { color: inherit; text-decoration: none; }
+      .section-label a:hover { color: #E8E5DE; }
 
-      /* Form */
       .form { display: flex; flex-direction: column; gap: 1.25rem; }
       label { display: block; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; margin-bottom: 0.4rem; }
       input, select, textarea {
@@ -64,7 +93,6 @@ const today = new Date().toISOString().split('T')[0];
       input:focus, select:focus, textarea:focus { border-color: #6B6860; }
       textarea { resize: vertical; line-height: 1.7; min-height: 320px; }
       .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-      .submit-row { display: flex; align-items: center; gap: 2rem; padding-top: 0.5rem; }
       button[type="submit"] {
         font-family: 'Inter', system-ui, sans-serif;
         font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase;
@@ -72,24 +100,30 @@ const today = new Date().toISOString().split('T')[0];
       }
       button[type="submit"]:hover { color: #E8E5DE; }
 
-      /* Divider */
       .divider { border: none; border-top: 1px solid #252420; margin: 3rem 0; }
 
-      /* Posts list */
       .post-list { display: flex; flex-direction: column; }
       .post-item { display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; padding: 1rem 0; border-bottom: 1px solid #252420; }
       .post-item:first-child { border-top: 1px solid #252420; }
       .post-title { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1.125rem; color: #E8E5DE; text-decoration: none; }
       .post-title:hover { opacity: 0.6; }
-      .post-meta { font-size: 0.7rem; color: #6B6860; white-space: nowrap; }
+      .post-actions { display: flex; align-items: center; gap: 1.5rem; flex-shrink: 0; }
+      .post-meta { font-size: 0.7rem; color: #6B6860; }
+      .edit-link { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6860; text-decoration: none; }
+      .edit-link:hover { color: #E8E5DE; }
+      .edit-link.active { color: #E8E5DE; }
 
-      /* Logout form */
+      .topic-list { display: flex; flex-direction: column; margin-bottom: 2rem; }
+      .topic-item { display: flex; align-items: baseline; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid #252420; gap: 2rem; }
+      .topic-item:first-child { border-top: 1px solid #252420; }
+      .topic-name { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1rem; color: #E8E5DE; }
+      .topic-meta { font-size: 0.7rem; color: #6B6860; }
+
       .logout-btn { font-family: 'Inter', system-ui, sans-serif; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; background: none; border: none; cursor: pointer; }
       .logout-btn:hover { color: #E8E5DE; }
     </style>
   </head>
   <body>
-
     <header class="topbar">
       <a href="/" class="topbar-title">Valtava Tutkimus</a>
       <div class="topbar-right">
@@ -102,48 +136,48 @@ const today = new Date().toISOString().split('T')[0];
 
     <main class="main">
 
-      {success && (
-        <div class="flash flash-success">
-          Kirjoitus julkaistu. Sivu päivittyy noin 2 minuutissa.
-        </div>
-      )}
-      {error === 'missing' && (
-        <div class="flash flash-error">Täytä otsikko ja sisältö.</div>
-      )}
-      {error === 'github' && (
-        <div class="flash flash-error">GitHub-virhe. Tarkista GITHUB_TOKEN.</div>
-      )}
-      {error === 'notoken' && (
-        <div class="flash flash-error">GITHUB_TOKEN puuttuu ympäristömuuttujista.</div>
-      )}
+      {success && <div class="flash flash-success">Kirjoitus julkaistu. Sivu päivittyy noin 2 minuutissa.</div>}
+      {topicSuccess && <div class="flash flash-success">Aihe lisätty. Sivu päivittyy noin 2 minuutissa.</div>}
+      {error === 'missing' && <div class="flash flash-error">Täytä otsikko ja sisältö.</div>}
+      {error === 'missing-topic' && <div class="flash flash-error">Täytä aiheen nimi.</div>}
+      {error === 'topic-exists' && <div class="flash flash-error">Samanniminen aihe on jo olemassa.</div>}
+      {error === 'github' && <div class="flash flash-error">GitHub-virhe. Tarkista GITHUB_TOKEN.</div>}
+      {error === 'notoken' && <div class="flash flash-error">GITHUB_TOKEN puuttuu ympäristömuuttujista.</div>}
 
-      <!-- New post form -->
-      <p class="section-label">Uusi kirjoitus</p>
+      <!-- Post form -->
+      <div class="section-label">
+        {isEditing
+          ? <><a href="/admin">← Uusi kirjoitus</a> &nbsp;·&nbsp; Muokkaa</>
+          : 'Uusi kirjoitus'
+        }
+      </div>
 
       <form method="POST" action="/api/posts" class="form">
+        {isEditing && <input type="hidden" name="slug" value={editSlug} />}
+
         <div>
           <label for="title">Otsikko</label>
-          <input id="title" name="title" type="text" required />
+          <input id="title" name="title" type="text" required value={editData?.title ?? ''} />
         </div>
 
         <div>
           <label for="description">Kuvaus</label>
-          <input id="description" name="description" type="text" />
+          <input id="description" name="description" type="text" value={editData?.description ?? ''} />
         </div>
 
         <div class="row">
           <div>
             <label for="author">Kirjoittaja</label>
             <select id="author" name="author">
-              <option value="julle">Julle</option>
-              <option value="tatu">Tatu</option>
+              <option value="julle" selected={editData?.author === 'julle'}>Julle</option>
+              <option value="tatu" selected={editData?.author === 'tatu'}>Tatu</option>
             </select>
           </div>
           <div>
             <label for="topic">Aihe</label>
             <select id="topic" name="topic">
               {topics.map((t) => (
-                <option value={t.slug}>{t.label}</option>
+                <option value={t.slug} selected={editData?.topic === t.slug}>{t.label}</option>
               ))}
             </select>
           </div>
@@ -151,31 +185,26 @@ const today = new Date().toISOString().split('T')[0];
 
         <div>
           <label for="date">Päivämäärä</label>
-          <input id="date" name="date" type="date" value={today} required />
+          <input id="date" name="date" type="date" value={editData?.date ?? today} required />
         </div>
 
         <div>
           <label for="content">Sisältö</label>
-          <textarea
-            id="content"
-            name="content"
-            required
-            placeholder="Kirjoita tähän. Markdown toimii: **lihavointi**, *kursiivi*, ## Väliotsikko"
-          ></textarea>
+          <textarea id="content" name="content" required>{editData?.body ?? ''}</textarea>
         </div>
 
-        <div class="submit-row">
-          <button type="submit">Julkaise →</button>
+        <div>
+          <button type="submit">{isEditing ? 'Päivitä →' : 'Julkaise →'}</button>
         </div>
       </form>
 
       <hr class="divider" />
 
-      <!-- Recent posts -->
+      <!-- Published posts -->
       <p class="section-label">Julkaistut kirjoitukset</p>
 
       {recentPosts.length === 0 ? (
-        <p style="color:#6B6860; font-size:0.875rem; font-weight:300">Ei vielä kirjoituksia.</p>
+        <p style="color:#6B6860; font-weight:300">Ei vielä kirjoituksia.</p>
       ) : (
         <div class="post-list">
           {recentPosts.map((post) => {
@@ -188,12 +217,51 @@ const today = new Date().toISOString().split('T')[0];
                 <a href={`/kirjoitukset/${post.slug}`} class="post-title" target="_blank">
                   {post.data.title}
                 </a>
-                <span class="post-meta">{author.name} · {formatted}</span>
+                <div class="post-actions">
+                  <span class="post-meta">{author.name} · {formatted}</span>
+                  <a
+                    href={`/admin?edit=${post.slug}`}
+                    class={`edit-link${editSlug === post.slug ? ' active' : ''}`}
+                  >
+                    Muokkaa
+                  </a>
+                </div>
               </div>
             );
           })}
         </div>
       )}
+
+      <hr class="divider" />
+
+      <!-- Topics -->
+      <p class="section-label">Aiheet</p>
+
+      <div class="topic-list">
+        {topics.map((t) => {
+          const count = allPosts.filter((p) => p.data.topic === t.slug).length;
+          return (
+            <div class="topic-item">
+              <span class="topic-name">{t.label}</span>
+              <span class="topic-meta">{count} kirjoitusta</span>
+            </div>
+          );
+        })}
+      </div>
+
+      <form method="POST" action="/api/topics" class="form">
+        <div>
+          <label for="topic-label">Uuden aiheen nimi</label>
+          <input id="topic-label" name="label" type="text" placeholder="esim. Ekologia" />
+        </div>
+        <div>
+          <label for="topic-desc">Kuvaus</label>
+          <input id="topic-desc" name="description" type="text" placeholder="Lyhyt kuvaus aiheesta." />
+        </div>
+        <div>
+          <button type="submit">Lisää aihe →</button>
+        </div>
+      </form>
 
     </main>
   </body>
