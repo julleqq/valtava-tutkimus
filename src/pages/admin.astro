@@ -112,12 +112,25 @@ const isEditing = editSlug && editData;
       .edit-link { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6860; text-decoration: none; }
       .edit-link:hover { color: #E8E5DE; }
       .edit-link.active { color: #E8E5DE; }
+      .delete-btn { font-family: 'Inter', system-ui, sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6860; background: none; border: none; cursor: pointer; padding: 0; }
+      .delete-btn:hover { color: #c07070; }
 
-      .topic-list { display: flex; flex-direction: column; margin-bottom: 2rem; }
+      .topic-list { display: flex; flex-direction: column; }
       .topic-item { display: flex; align-items: baseline; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid #252420; gap: 2rem; }
       .topic-item:first-child { border-top: 1px solid #252420; }
       .topic-name { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1rem; color: #E8E5DE; }
       .topic-meta { font-size: 0.7rem; color: #6B6860; }
+
+      /* Collapsible new-topic form */
+      details.new-topic { border-bottom: 1px solid #252420; }
+      details.new-topic summary { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; cursor: pointer; list-style: none; }
+      details.new-topic summary::-webkit-details-marker { display: none; }
+      details.new-topic summary .label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; }
+      details.new-topic summary .arrow { font-size: 0.65rem; color: #6B6860; transition: transform 0.15s; }
+      details.new-topic[open] summary .arrow { transform: rotate(90deg); }
+      details.new-topic summary:hover .label,
+      details.new-topic summary:hover .arrow { color: #E8E5DE; }
+      details.new-topic .inner { padding: 1.25rem 0 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
 
       .logout-btn { font-family: 'Inter', system-ui, sans-serif; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; background: none; border: none; cursor: pointer; }
       .logout-btn:hover { color: #E8E5DE; }
@@ -137,6 +150,7 @@ const isEditing = editSlug && editData;
     <main class="main">
 
       {success && <div class="flash flash-success">Kirjoitus julkaistu. Sivu päivittyy noin 2 minuutissa.</div>}
+      {Astro.url.searchParams.get('deleted') && <div class="flash flash-success">Kirjoitus poistettu. Sivu päivittyy noin 2 minuutissa.</div>}
       {topicSuccess && <div class="flash flash-success">Aihe lisätty. Sivu päivittyy noin 2 minuutissa.</div>}
       {error === 'missing' && <div class="flash flash-error">Täytä otsikko ja sisältö.</div>}
       {error === 'missing-topic' && <div class="flash flash-error">Täytä aiheen nimi.</div>}
@@ -225,6 +239,16 @@ const isEditing = editSlug && editData;
                   >
                     Muokkaa
                   </a>
+                  <form method="POST" action="/api/delete-post" style="display:inline">
+                    <input type="hidden" name="slug" value={post.slug} />
+                    <button
+                      type="submit"
+                      class="delete-btn"
+                      onclick={`return confirm('Poistetaanko "${post.data.title}"?')`}
+                    >
+                      Poista
+                    </button>
+                  </form>
                 </div>
               </div>
             );
@@ -247,21 +271,27 @@ const isEditing = editSlug && editData;
             </div>
           );
         })}
-      </div>
 
-      <form method="POST" action="/api/topics" class="form">
-        <div>
-          <label for="topic-label">Uuden aiheen nimi</label>
-          <input id="topic-label" name="label" type="text" placeholder="esim. Ekologia" />
-        </div>
-        <div>
-          <label for="topic-desc">Kuvaus</label>
-          <input id="topic-desc" name="description" type="text" placeholder="Lyhyt kuvaus aiheesta." />
-        </div>
-        <div>
-          <button type="submit">Lisää aihe →</button>
-        </div>
-      </form>
+        <details class="new-topic">
+          <summary>
+            <span class="label">Uusi aihe</span>
+            <span class="arrow">›</span>
+          </summary>
+          <form method="POST" action="/api/topics" class="inner">
+            <div>
+              <label for="topic-label">Nimi</label>
+              <input id="topic-label" name="label" type="text" placeholder="esim. Ekologia" />
+            </div>
+            <div>
+              <label for="topic-desc">Kuvaus</label>
+              <input id="topic-desc" name="description" type="text" placeholder="Lyhyt kuvaus aiheesta." />
+            </div>
+            <div>
+              <button type="submit">Lisää →</button>
+            </div>
+          </form>
+        </details>
+      </div>
 
     </main>
   </body>
