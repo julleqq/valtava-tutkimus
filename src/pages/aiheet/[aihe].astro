@@ -3,19 +3,25 @@ export const prerender = true;
 
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
-import { topics, getTopic } from '../../data/topics';
+import { topics, allTopics, getTopic, FALLBACK_TOPIC } from '../../data/topics';
 import { getAuthor } from '../../data/authors';
 
 export async function getStaticPaths() {
-  return topics.map((topic) => ({ params: { aihe: topic.slug } }));
+  return allTopics.map((topic) => ({ params: { aihe: topic.slug } }));
 }
 
 const { aihe } = Astro.params;
 const topic = getTopic(aihe);
 
 const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+// For the fallback topic, collect posts whose topic no longer exists
+const knownSlugs = new Set(topics.map((t) => t.slug));
 const posts = allPosts
-  .filter((p) => p.data.topic === aihe)
+  .filter((p) =>
+    aihe === FALLBACK_TOPIC.slug
+      ? !knownSlugs.has(p.data.topic)
+      : p.data.topic === aihe
+  )
   .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 ---
 

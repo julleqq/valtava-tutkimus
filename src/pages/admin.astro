@@ -3,14 +3,11 @@ export const prerender = false;
 
 import { getCollection } from 'astro:content';
 import { topics } from '../data/topics';
-import { getAuthor } from '../data/authors';
+import { authors, getAuthor } from '../data/authors';
 
-const success = Astro.url.searchParams.get('success');
-const topicSuccess = Astro.url.searchParams.get('topic-success');
-const error = Astro.url.searchParams.get('error');
-const editSlug = Astro.url.searchParams.get('edit');
+const params = Astro.url.searchParams;
+const editSlug = params.get('edit');
 
-// When editing, fetch the post from GitHub
 interface EditData {
   title: string; description: string; author: string;
   topic: string; date: string; body: string;
@@ -30,24 +27,16 @@ if (editSlug && import.meta.env.GITHUB_TOKEN) {
       const fm = match[1];
       const get = (key: string) =>
         fm.match(new RegExp(`^${key}:\\s*"?(.*?)"?\\s*$`, 'm'))?.[1]?.replace(/\\"/g, '"') ?? '';
-      editData = {
-        title: get('title'),
-        description: get('description'),
-        author: get('author'),
-        topic: get('topic'),
-        date: get('date'),
-        body: match[2].trim(),
-      };
+      editData = { title: get('title'), description: get('description'), author: get('author'), topic: get('topic'), date: get('date'), body: match[2].trim() };
     }
   }
 }
 
 const allPosts = await getCollection('posts', ({ data }) => !data.draft);
-const recentPosts = allPosts
-  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+const sortedPosts = allPosts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 
 const today = new Date().toISOString().split('T')[0];
-const isEditing = editSlug && editData;
+const isEditing = !!(editSlug && editData);
 ---
 
 <!doctype html>
@@ -65,7 +54,7 @@ const isEditing = editSlug && editData;
       body { min-height: 100vh; }
 
       .topbar { display: flex; align-items: center; justify-content: space-between; padding: 1.5rem 2rem; border-bottom: 1px solid #252420; }
-      .topbar-title { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1.125rem; color: #E8E5DE; text-decoration: none; }
+      .topbar-title { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300; font-size: 1.125rem; color: #E8E5DE; text-decoration: none; }
       .topbar-right { display: flex; align-items: center; gap: 2rem; }
       .topbar-link { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; text-decoration: none; }
       .topbar-link:hover { color: #E8E5DE; }
@@ -73,70 +62,74 @@ const isEditing = editSlug && editData;
       .main { max-width: 720px; margin: 0 auto; padding: 3rem 2rem 6rem; }
 
       .flash { font-size: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 2rem; border: 1px solid; }
-      .flash-success { border-color: #252420; color: #6B6860; }
-      .flash-error { border-color: #3a2020; color: #8a6060; }
+      .flash-ok { border-color: #252420; color: #6B6860; }
+      .flash-err { border-color: #3a2020; color: #8a6060; }
 
-      .section-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; margin-bottom: 2rem; }
+      .section-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; margin-bottom: 1.5rem; }
       .section-label a { color: inherit; text-decoration: none; }
       .section-label a:hover { color: #E8E5DE; }
+      .divider { border: none; border-top: 1px solid #252420; margin: 3rem 0; }
 
+      /* Forms */
       .form { display: flex; flex-direction: column; gap: 1.25rem; }
       label { display: block; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; margin-bottom: 0.4rem; }
       input, select, textarea {
         display: block; width: 100%;
         background: #141413; border: 1px solid #252420;
         color: #E8E5DE; font-family: 'Inter', system-ui, sans-serif;
-        font-size: 0.875rem; font-weight: 300;
-        padding: 0.75rem 1rem; outline: none;
-        appearance: none; -webkit-appearance: none;
+        font-size: 0.875rem; font-weight: 300; padding: 0.75rem 1rem;
+        outline: none; appearance: none; -webkit-appearance: none;
       }
       input:focus, select:focus, textarea:focus { border-color: #6B6860; }
       textarea { resize: vertical; line-height: 1.7; min-height: 320px; }
       .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-      button[type="submit"] {
-        font-family: 'Inter', system-ui, sans-serif;
-        font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase;
-        color: #6B6860; background: none; border: none; cursor: pointer; padding: 0;
-      }
-      button[type="submit"]:hover { color: #E8E5DE; }
+      .btn { font-family: 'Inter', system-ui, sans-serif; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; background: none; border: none; cursor: pointer; padding: 0; }
+      .btn:hover { color: #E8E5DE; }
+      .btn-danger:hover { color: #c07070; }
 
-      .divider { border: none; border-top: 1px solid #252420; margin: 3rem 0; }
-
+      /* Post list */
       .post-list { display: flex; flex-direction: column; }
       .post-item { display: flex; align-items: baseline; justify-content: space-between; gap: 2rem; padding: 1rem 0; border-bottom: 1px solid #252420; }
       .post-item:first-child { border-top: 1px solid #252420; }
-      .post-title { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1.125rem; color: #E8E5DE; text-decoration: none; }
+      .post-title { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300; font-size: 1.125rem; color: #E8E5DE; text-decoration: none; }
       .post-title:hover { opacity: 0.6; }
       .post-actions { display: flex; align-items: center; gap: 1.5rem; flex-shrink: 0; }
       .post-meta { font-size: 0.7rem; color: #6B6860; }
       .edit-link { font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6860; text-decoration: none; }
-      .edit-link:hover { color: #E8E5DE; }
-      .edit-link.active { color: #E8E5DE; }
-      .delete-btn { font-family: 'Inter', system-ui, sans-serif; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: #6B6860; background: none; border: none; cursor: pointer; padding: 0; }
-      .delete-btn:hover { color: #c07070; }
+      .edit-link:hover, .edit-link.active { color: #E8E5DE; }
 
+      /* Topic list */
       .topic-list { display: flex; flex-direction: column; }
-      .topic-item { display: flex; align-items: baseline; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid #252420; gap: 2rem; }
-      .topic-item:first-child { border-top: 1px solid #252420; }
-      .topic-name { font-family: 'Cormorant Garamond', Georgia, serif; font-style: italic; font-weight: 300; font-size: 1rem; color: #E8E5DE; }
+      .topic-row { display: flex; align-items: baseline; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid #252420; gap: 2rem; }
+      .topic-row:first-child { border-top: 1px solid #252420; }
+      .topic-name { font-family: 'Cormorant Garamond', serif; font-style: italic; font-weight: 300; font-size: 1rem; color: #E8E5DE; }
+      .topic-actions { display: flex; align-items: center; gap: 1.25rem; }
       .topic-meta { font-size: 0.7rem; color: #6B6860; }
 
-      /* Collapsible new-topic form */
-      details.new-topic { border-bottom: 1px solid #252420; }
-      details.new-topic summary { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; cursor: pointer; list-style: none; }
-      details.new-topic summary::-webkit-details-marker { display: none; }
-      details.new-topic summary .label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; }
-      details.new-topic summary .arrow { font-size: 0.65rem; color: #6B6860; transition: transform 0.15s; }
-      details.new-topic[open] summary .arrow { transform: rotate(90deg); }
-      details.new-topic summary:hover .label,
-      details.new-topic summary:hover .arrow { color: #E8E5DE; }
-      details.new-topic .inner { padding: 1.25rem 0 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+      /* Collapsible rows */
+      details.collapsible { border-bottom: 1px solid #252420; }
+      details.collapsible summary { display: flex; align-items: center; justify-content: space-between; padding: 0.75rem 0; cursor: pointer; list-style: none; }
+      details.collapsible summary::-webkit-details-marker { display: none; }
+      details.collapsible summary .sum-label { font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; }
+      details.collapsible summary .sum-arrow { font-size: 0.65rem; color: #6B6860; transition: transform 0.15s; }
+      details.collapsible[open] summary .sum-arrow { transform: rotate(90deg); }
+      details.collapsible summary:hover .sum-label,
+      details.collapsible summary:hover .sum-arrow { color: #E8E5DE; }
+      details.collapsible .inner { padding: 1.25rem 0 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+
+      /* Author cards */
+      .author-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+      @media (max-width: 560px) { .author-grid { grid-template-columns: 1fr; } }
+
+      /* New-topic inline input */
+      #new-topic-row { display: none; margin-top: 0.5rem; }
 
       .logout-btn { font-family: 'Inter', system-ui, sans-serif; font-size: 0.65rem; letter-spacing: 0.15em; text-transform: uppercase; color: #6B6860; background: none; border: none; cursor: pointer; }
       .logout-btn:hover { color: #E8E5DE; }
     </style>
   </head>
   <body>
+
     <header class="topbar">
       <a href="/" class="topbar-title">Valtava Tutkimus</a>
       <div class="topbar-right">
@@ -149,16 +142,19 @@ const isEditing = editSlug && editData;
 
     <main class="main">
 
-      {success && <div class="flash flash-success">Kirjoitus julkaistu. Sivu päivittyy noin 2 minuutissa.</div>}
-      {Astro.url.searchParams.get('deleted') && <div class="flash flash-success">Kirjoitus poistettu. Sivu päivittyy noin 2 minuutissa.</div>}
-      {topicSuccess && <div class="flash flash-success">Aihe lisätty. Sivu päivittyy noin 2 minuutissa.</div>}
-      {error === 'missing' && <div class="flash flash-error">Täytä otsikko ja sisältö.</div>}
-      {error === 'missing-topic' && <div class="flash flash-error">Täytä aiheen nimi.</div>}
-      {error === 'topic-exists' && <div class="flash flash-error">Samanniminen aihe on jo olemassa.</div>}
-      {error === 'github' && <div class="flash flash-error">GitHub-virhe. Tarkista GITHUB_TOKEN.</div>}
-      {error === 'notoken' && <div class="flash flash-error">GITHUB_TOKEN puuttuu ympäristömuuttujista.</div>}
+      <!-- Flash messages -->
+      {params.get('success') && <div class="flash flash-ok">Kirjoitus julkaistu. Sivu päivittyy noin 2 minuutissa.</div>}
+      {params.get('deleted') && <div class="flash flash-ok">Kirjoitus poistettu. Sivu päivittyy noin 2 minuutissa.</div>}
+      {params.get('topic-success') && <div class="flash flash-ok">Aihe lisätty. Sivu päivittyy noin 2 minuutissa.</div>}
+      {params.get('topic-deleted') && <div class="flash flash-ok">Aihe poistettu. Kirjoitukset siirtyvät "Muut aiheet" -osioon.</div>}
+      {params.get('author-updated') && <div class="flash flash-ok">Kirjoittajan tiedot päivitetty. Sivu päivittyy noin 2 minuutissa.</div>}
+      {params.get('error') === 'missing' && <div class="flash flash-err">Täytä otsikko ja sisältö.</div>}
+      {params.get('error') === 'missing-topic' && <div class="flash flash-err">Täytä aiheen nimi.</div>}
+      {params.get('error') === 'topic-exists' && <div class="flash flash-err">Samanniminen aihe on jo olemassa.</div>}
+      {params.get('error') === 'github' && <div class="flash flash-err">GitHub-virhe. Tarkista GITHUB_TOKEN.</div>}
+      {params.get('error') === 'notoken' && <div class="flash flash-err">GITHUB_TOKEN puuttuu ympäristömuuttujista.</div>}
 
-      <!-- Post form -->
+      <!-- ── Post editor ── -->
       <div class="section-label">
         {isEditing
           ? <><a href="/admin">← Uusi kirjoitus</a> &nbsp;·&nbsp; Muokkaa</>
@@ -183,17 +179,22 @@ const isEditing = editSlug && editData;
           <div>
             <label for="author">Kirjoittaja</label>
             <select id="author" name="author">
-              <option value="julle" selected={editData?.author === 'julle'}>Julle</option>
-              <option value="tatu" selected={editData?.author === 'tatu'}>Tatu</option>
+              {authors.map((a) => (
+                <option value={a.slug} selected={editData?.author === a.slug}>{a.name}</option>
+              ))}
             </select>
           </div>
           <div>
             <label for="topic">Aihe</label>
-            <select id="topic" name="topic">
+            <select id="topic" name="topic" onchange="handleTopicChange(this)">
               {topics.map((t) => (
                 <option value={t.slug} selected={editData?.topic === t.slug}>{t.label}</option>
               ))}
+              <option value="__new__">+ Uusi aihe</option>
             </select>
+            <div id="new-topic-row">
+              <input id="new-topic-label" name="new-topic-label" type="text" placeholder="Aiheen nimi" />
+            </div>
           </div>
         </div>
 
@@ -208,46 +209,31 @@ const isEditing = editSlug && editData;
         </div>
 
         <div>
-          <button type="submit">{isEditing ? 'Päivitä →' : 'Julkaise →'}</button>
+          <button type="submit" class="btn">{isEditing ? 'Päivitä →' : 'Julkaise →'}</button>
         </div>
       </form>
 
       <hr class="divider" />
 
-      <!-- Published posts -->
+      <!-- ── Published posts ── -->
       <p class="section-label">Julkaistut kirjoitukset</p>
 
-      {recentPosts.length === 0 ? (
+      {sortedPosts.length === 0 ? (
         <p style="color:#6B6860; font-weight:300">Ei vielä kirjoituksia.</p>
       ) : (
         <div class="post-list">
-          {recentPosts.map((post) => {
+          {sortedPosts.map((post) => {
             const author = getAuthor(post.data.author);
-            const formatted = new Intl.DateTimeFormat('fi-FI', {
-              day: 'numeric', month: 'numeric', year: 'numeric',
-            }).format(post.data.date);
+            const formatted = new Intl.DateTimeFormat('fi-FI', { day: 'numeric', month: 'numeric', year: 'numeric' }).format(post.data.date);
             return (
               <div class="post-item">
-                <a href={`/kirjoitukset/${post.slug}`} class="post-title" target="_blank">
-                  {post.data.title}
-                </a>
+                <a href={`/kirjoitukset/${post.slug}`} class="post-title" target="_blank">{post.data.title}</a>
                 <div class="post-actions">
                   <span class="post-meta">{author.name} · {formatted}</span>
-                  <a
-                    href={`/admin?edit=${post.slug}`}
-                    class={`edit-link${editSlug === post.slug ? ' active' : ''}`}
-                  >
-                    Muokkaa
-                  </a>
+                  <a href={`/admin?edit=${post.slug}`} class={`edit-link${editSlug === post.slug ? ' active' : ''}`}>Muokkaa</a>
                   <form method="POST" action="/api/delete-post" style="display:inline">
                     <input type="hidden" name="slug" value={post.slug} />
-                    <button
-                      type="submit"
-                      class="delete-btn"
-                      onclick={`return confirm('Poistetaanko "${post.data.title}"?')`}
-                    >
-                      Poista
-                    </button>
+                    <button type="submit" class="btn btn-danger" onclick={`return confirm('Poistetaanko "${post.data.title}"?')`}>Poista</button>
                   </form>
                 </div>
               </div>
@@ -258,24 +244,30 @@ const isEditing = editSlug && editData;
 
       <hr class="divider" />
 
-      <!-- Topics -->
+      <!-- ── Topics ── -->
       <p class="section-label">Aiheet</p>
 
       <div class="topic-list">
         {topics.map((t) => {
           const count = allPosts.filter((p) => p.data.topic === t.slug).length;
           return (
-            <div class="topic-item">
+            <div class="topic-row">
               <span class="topic-name">{t.label}</span>
-              <span class="topic-meta">{count} kirjoitusta</span>
+              <div class="topic-actions">
+                <span class="topic-meta">{count} kirjoitusta</span>
+                <form method="POST" action="/api/delete-topic" style="display:inline">
+                  <input type="hidden" name="slug" value={t.slug} />
+                  <button type="submit" class="btn btn-danger" onclick={`return confirm('Poistetaanko aihe "${t.label}"? Kirjoitukset siirtyvät Muut aiheet -osioon.')`}>Poista</button>
+                </form>
+              </div>
             </div>
           );
         })}
 
-        <details class="new-topic">
+        <details class="collapsible">
           <summary>
-            <span class="label">Uusi aihe</span>
-            <span class="arrow">›</span>
+            <span class="sum-label">Uusi aihe</span>
+            <span class="sum-arrow">›</span>
           </summary>
           <form method="POST" action="/api/topics" class="inner">
             <div>
@@ -286,13 +278,45 @@ const isEditing = editSlug && editData;
               <label for="topic-desc">Kuvaus</label>
               <input id="topic-desc" name="description" type="text" placeholder="Lyhyt kuvaus aiheesta." />
             </div>
-            <div>
-              <button type="submit">Lisää →</button>
-            </div>
+            <button type="submit" class="btn">Lisää →</button>
           </form>
         </details>
       </div>
 
+      <hr class="divider" />
+
+      <!-- ── Authors ── -->
+      <p class="section-label">Kirjoittajat</p>
+
+      <div class="author-grid">
+        {authors.map((a) => (
+          <form method="POST" action="/api/update-author" class="form">
+            <input type="hidden" name="slug" value={a.slug} />
+            <div>
+              <label>Nimi</label>
+              <input name="name" type="text" value={a.name} required />
+            </div>
+            <div>
+              <label>Bio</label>
+              <textarea name="bio" rows={3} style="min-height:0">{a.bio}</textarea>
+            </div>
+            <button type="submit" class="btn">Tallenna →</button>
+          </form>
+        ))}
+      </div>
+
     </main>
+
+    <script>
+      function handleTopicChange(select: HTMLSelectElement) {
+        const row = document.getElementById('new-topic-row') as HTMLDivElement;
+        const input = document.getElementById('new-topic-label') as HTMLInputElement;
+        const show = select.value === '__new__';
+        row.style.display = show ? 'block' : 'none';
+        input.required = show;
+        if (show) input.focus();
+      }
+    </script>
+
   </body>
 </html>

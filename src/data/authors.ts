@@ -1,22 +1,13 @@
+import authorsData from './authors.json';
+
 export interface Author {
-  slug: 'julle' | 'tatu';
+  slug: string;
   name: string;
   bio: string;
 }
 
-export const authors: Author[] = [
-  {
-    slug: 'julle',
-    name: 'Julle',
-    bio: 'Kirjoittaa tajunnasta, yhteiskunnasta ja niiden välisistä jännitteistä.',
-  },
-  {
-    slug: 'tatu',
-    name: 'Tatu',
-    bio: 'Tutkii psykedeelien, filosofian ja kulttuurikritiikin leikkauspisteitä.',
-  },
-];
+export const authors: Author[] = authorsData;
 
-export function getAuthor(slug: 'julle' | 'tatu'): Author {
-  return authors.find((a) => a.slug === slug)!;
+export function getAuthor(slug: string): Author {
+  return authors.find((a) => a.slug === slug) ?? { slug, name: slug, bio: '' };
 }
