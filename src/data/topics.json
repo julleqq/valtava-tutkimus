@@ -18,5 +18,10 @@
     "slug": "filosofia",
     "label": "Filosofia",
     "description": "Olemassaolon, tiedon ja etiikan peruskysymykset."
+  },
+  {
+    "slug": "tutkiessa-tormattya",
+    "label": "Tutkiessa törmättyä",
+    "description": "Kun kaivaa kuopan löytää vaikka kiven tai nuolenpään mikä on hieno. niitä on täällä"
   }
 ]
