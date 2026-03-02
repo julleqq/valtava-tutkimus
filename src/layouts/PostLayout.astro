@@ -1,0 +1,64 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import { getAuthor } from '../data/authors';
+import { getTopic } from '../data/topics';
+
+interface Props {
+  title: string;
+  description: string;
+  author: 'julle' | 'tatu';
+  topic: string;
+  date: Date;
+}
+
+const { title, description, author: authorSlug, topic: topicSlug, date } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const author = getAuthor(authorSlug);
+const topic = getTopic(topicSlug);
+
+const formatted = new Intl.DateTimeFormat('fi-FI', {
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+}).format(date);
+---
+
+<BaseLayout title={title} description={description}>
+  <article class="pt-40 pb-32 px-8">
+    <div class="max-w-2xl mx-auto">
+      <!-- Back link -->
+      <a
+        href={`${base}/aiheet/${topicSlug}`}
+        class="inline-flex items-center gap-2 text-xs tracking-widest uppercase text-muted hover:text-parchment transition-colors mb-16"
+      >
+        <span>←</span>
+        <span>{topic?.label ?? topicSlug}</span>
+      </a>
+
+      <!-- Header -->
+      <header class="mb-16">
+        <h1 class="font-serif italic font-light text-4xl md:text-5xl leading-tight mb-8 text-parchment">
+          {title}
+        </h1>
+        <div class="flex items-center gap-3 text-xs tracking-widest uppercase text-muted">
+          <span>{author.name}</span>
+          <span class="text-border">·</span>
+          <span>{formatted}</span>
+        </div>
+      </header>
+
+      <!-- Divider -->
+      <div class="w-px h-12 bg-border mx-0 mb-16"></div>
+
+      <!-- Body -->
+      <div class="prose prose-sm max-w-none font-sans font-light leading-relaxed text-parchment/90
+        [&>p]:mb-6
+        [&>h2]:font-serif [&>h2]:italic [&>h2]:font-light [&>h2]:text-2xl [&>h2]:text-parchment [&>h2]:mt-12 [&>h2]:mb-4
+        [&>h3]:font-serif [&>h3]:italic [&>h3]:font-light [&>h3]:text-xl [&>h3]:text-parchment [&>h3]:mt-8 [&>h3]:mb-3
+        [&>blockquote]:border-l [&>blockquote]:border-border [&>blockquote]:pl-4 [&>blockquote]:text-muted
+        [&>a]:underline [&>a]:underline-offset-2">
+        <slot />
+      </div>
+    </div>
+  </article>
+</BaseLayout>

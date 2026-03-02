@@ -1,0 +1,86 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { getTopic } from '../data/topics';
+import { getAuthor } from '../data/authors';
+
+const base = import.meta.env.BASE_URL;
+
+const allPosts = await getCollection('posts', ({ data }) => !data.draft);
+const recent = allPosts
+  .sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf())
+  .slice(0, 5);
+---
+
+<BaseLayout title="Valtava Tutkimus" description="Julle & Tatu — psykedeelit, tietoisuus, yhteiskuntakritiikki ja muita valtavia tutkimuksia.">
+  <!-- Hero -->
+  <section class="min-h-screen flex flex-col items-center justify-center text-center px-8 relative">
+    <h1 class="font-serif italic font-light text-6xl md:text-8xl tracking-tight text-parchment mb-8">
+      Valtava Tutkimus
+    </h1>
+    <p class="text-muted text-sm tracking-widest uppercase mb-4">
+      Julle &amp; Tatu
+    </p>
+    <p class="text-muted/70 text-sm font-light max-w-sm leading-relaxed mt-2">
+      Kirjoituksia tajunnasta, yhteiskunnasta ja niiden välisistä jännitteistä.
+    </p>
+
+    <!-- Vertical line leading down -->
+    <div class="absolute bottom-0 left-1/2 -translate-x-1/2 w-px h-24 bg-gradient-to-b from-border to-transparent"></div>
+  </section>
+
+  <!-- Recent posts -->
+  <section class="px-8 py-24">
+    <div class="max-w-2xl mx-auto">
+      <p class="text-xs tracking-widest uppercase text-muted mb-12">Viimeisimmät</p>
+
+      <div class="space-y-0">
+        {recent.map((post, i) => {
+          const topic = getTopic(post.data.topic);
+          const author = getAuthor(post.data.author);
+          const formatted = new Intl.DateTimeFormat('fi-FI', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          }).format(post.data.date);
+
+          return (
+            <div>
+              {i > 0 && <div class="border-t border-border"></div>}
+              <a
+                href={`${base}/kirjoitukset/${post.slug}`}
+                class="group flex items-start justify-between py-7 gap-8"
+              >
+                <div class="flex-1 min-w-0">
+                  <h2 class="font-serif italic font-light text-xl text-parchment group-hover:opacity-70 transition-opacity leading-snug">
+                    {post.data.title}
+                  </h2>
+                  <p class="text-muted text-xs mt-2 font-light leading-relaxed line-clamp-2">
+                    {post.data.description}
+                  </p>
+                </div>
+                <div class="flex-shrink-0 text-right">
+                  <div class="text-xs text-muted tracking-wide">{author.name}</div>
+                  <div class="text-xs text-muted/50 mt-0.5">{formatted}</div>
+                  {topic && (
+                    <div class="text-xs text-muted/40 mt-1 tracking-widest uppercase">{topic.label}</div>
+                  )}
+                </div>
+              </a>
+            </div>
+          );
+        })}
+      </div>
+
+      <!-- Link to all topics -->
+      <div class="mt-16 border-t border-border pt-12 text-center">
+        <a
+          href={`${base}/aiheet`}
+          class="text-xs tracking-widest uppercase text-muted hover:text-parchment transition-colors"
+        >
+          Kaikki aiheet →
+        </a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
