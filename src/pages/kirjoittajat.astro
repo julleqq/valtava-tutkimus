@@ -22,7 +22,7 @@ const allPosts = await getCollection('posts', ({ data }) => !data.draft);
           return (
             <div>
               <h2 class="font-serif italic font-light text-4xl text-parchment mb-3">{author.name}</h2>
-              <p class="text-muted text-sm font-light leading-relaxed max-w-sm mb-12">{author.bio}</p>
+              <p class="text-muted/80 text-sm leading-relaxed max-w-sm mb-12">{author.bio}</p>
               {authorPosts.length > 0 && (
                 <div>
                   <p class="text-xs tracking-widest uppercase text-muted/50 mb-6">Kirjoitukset</p>

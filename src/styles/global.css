@@ -6,8 +6,13 @@
   html {
     background-color: #0C0C0B;
     color: #E8E5DE;
+    font-size: 17px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  @media (min-width: 1280px) {
+    html { font-size: 18px; }
   }
 
   ::selection {
